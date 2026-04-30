@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>하이러닝 활용 수업 설계 대시보드</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/fonts-archive/Paperlogy/subsets/Paperlogy-dynamic-subset.css" type="text/css"/>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <style>
+        :root {
+            --primary-color: #8A2BE2; /* Vibrant Creative - Purple */
+            --secondary-color: #FF1493; /* Vibrant Creative - Pink */
+            --bg-color: #f8f7f4;
+            --text-color: #1f2937;
+            --container-bg: #ffffff;
+            --border-color: #e0e0e0;
+            --header-bg: #f0f2f5;
+        }
+
+        body {
+            font-family: "Paperlogy", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif;
+            margin: 0;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .dashboard-container { display: flex; width: 100%; height: 100%; }
+        .sidebar { width: 240px; background-color: var(--container-bg); border-right: 1px solid var(--border-color); padding: 20px; box-shadow: 2px 0 5px rgba(0,0,0,0.05); display: flex; flex-direction: column; }
+        .sidebar h1 { color: var(--primary-color); font-size: 24px; margin-bottom: 30px; font-weight: 700; }
+        .sidebar nav a { display: block; padding: 12px 15px; text-decoration: none; color: var(--text-color); border-radius: 6px; margin-bottom: 8px; font-weight: 500; transition: background-color 0.3s, color 0.3s; cursor: pointer; }
+        .sidebar nav a.active, .sidebar nav a:hover { background-color: var(--primary-color); color: white; }
+        .main-content { flex-grow: 1; padding: 30px; overflow-y: auto; }
+        .page-header { border-bottom: 2px solid var(--border-color); padding-bottom: 15px; margin-bottom: 30px; }
+        .page-header h2 { font-size: 28px; margin: 0; color: var(--text-color); }
+        .form-container, .output-container { background-color: var(--container-bg); padding: 30px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08); }
+
+        #step1-form, #step2-form, #last-step, #saved-plans-view { display: none; }
+        
+        .form-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 20px; }
+        .form-group { display: flex; flex-direction: column; }
+        .form-group.full-width { grid-column: 1 / -1; }
+        .form-group label { margin-bottom: 8px; font-weight: 600; font-size: 14px; }
+        .form-group input, .form-group select { padding: 10px; border: 1px solid var(--border-color); border-radius: 4px; font-size: 16px; font-family: inherit; }
+        .form-actions { grid-column: 1 / -1; text-align: right; margin-top: 20px; display: flex; justify-content: flex-end; gap: 10px;}
+
+        button { padding: 12px 25px; color: white; border: none; border-radius: 5px; font-size: 16px; font-weight: 600; cursor: pointer; transition: background-color 0.3s; font-family: inherit; }
+        button.primary { background-color: var(--primary-color); }
+        button.primary:hover { background-color: #6a1b9a; }
+        button.secondary { background-color: #6c757d; color: white; }
+        button.secondary:hover { background-color: #5a6268; }
+        button.success { background-color: #28a745; }
+        button.success:hover { background-color: #218838; }
+        
+        .lesson-plan-table { width: 100%; border-collapse: collapse; margin-top: 20px; table-layout: fixed; }
+        .lesson-plan-table th, .lesson-plan-table td { border: 1px solid var(--border-color); padding: 12px; text-align: center; vertical-align: middle; }
+        .lesson-plan-table th { background-color: var(--header-bg); font-weight: 700; }
+        .lesson-plan-table textarea { width: 95%; height: 80px; resize: vertical; padding: 5px; border: 1px solid #ccc; border-radius: 4px; font-family: inherit; }
+        .lesson-plan-table input[type="text"] { width: 95%; }
+        .lesson-plan-table input[type="number"] { width: 80px; }
+        .checkbox-group label { display: block; margin-bottom: 5px; font-size: 14px; text-align: left; }
+
+        #last-step { border: 2px solid var(--primary-color); }
+        .output-header { text-align: center; background-color: var(--primary-color); color: white; padding: 15px; border-radius: 6px 6px 0 0; }
+        .output-header h3 { margin: 0; font-size: 24px; }
+        .output-section { padding: 20px; border-bottom: 1px dashed var(--border-color); }
+        .output-section:last-child { border-bottom: none; }
+        .output-section h4 { color: var(--primary-color); margin-top: 0; border-bottom: 2px solid var(--secondary-color); padding-bottom: 5px; }
+        .output-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; }
+        .output-item p { margin: 0; }
+        .output-item strong { font-weight: 600; }
+        .output-plan-table { width: 100%; margin-top: 15px; border-collapse: collapse; table-layout: fixed; }
+        .output-plan-table th, .output-plan-table td { border: 1px solid var(--border-color); padding: 10px; text-align: left; word-wrap: break-word; vertical-align: top; }
+        .output-plan-table th { background: var(--header-bg); font-weight: 700; }
+        .stage-title { font-weight: bold; font-size: 1.1em; text-align: center; }
+
+        .saved-plan-list { list-style-type: none; padding: 0; }
+        .saved-plan-item { display: flex; justify-content: space-between; align-items: center; padding: 15px; border: 1px solid var(--border-color); border-radius: 6px; margin-bottom: 10px; }
+        .saved-plan-item span { font-weight: 600; }
+        .saved-plan-actions button { padding: 8px 15px; font-size: 14px; }
+        .saved-plan-actions button.edit { background-color: #28a745; }
+        .saved-plan-actions button.delete { background-color: #dc3545; }
+    </style>
+</head>
+<body>
+    <div class="dashboard-container">
+        <aside class="sidebar">
+            <h1>하이러닝 수업 설계 GEM</h1>
+            <nav>
+                <a id="nav-new-plan" class="active">새 수업 설계</a>
+                <a id="nav-saved-plans">저장된 설계안</a>
+            </nav>
+        </aside>
+
+        <main class="main-content">
+            <header class="page-header">
+                <h2 id="page-title">새로운 수업 설계안 작성</h2>
+            </header>
+
+            <section id="step1-form" class="form-container"></section>
+            <section id="step2-form" class="form-container"></section>
+            <section id="last-step" class="output-container"></section>
+            <section id="saved-plans-view" class="form-container"></section>
+        </main>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            let currentEditingId = null;
+            let currentPlanData = {};
+
+            const mainFunctions = ['교재', '모둠/발표', '화이트보드', '문제풀이', '유튜브', '웹URL', '우리반 클래스보드'];
+            const subFunctions = ['질문하기', '모니터링', '발표시키기', '위젯', '학급경영도구', '수업보조도구'];
+            const evaluations = ['문제풀이', 'AI학습진단', '논술형문항', 'AI서논술형평가'];
+
+            const views = {
+                step1: document.getElementById('step1-form'),
+                step2: document.getElementById('step2-form'),
+                lastStep: document.getElementById('last-step'),
+                saved: document.getElementById('saved-plans-view'),
+            };
+
+            const pageTitle = document.getElementById('page-title');
+            const navLinks = { new: document.getElementById('nav-new-plan'), saved: document.getElementById('nav-saved-plans') };
+
+            const step1Template = `
+                <form id="basic-info-form">
+                    <div class="form-grid">
+                        <div class="form-group"><label for="teacher-name">교사명</label><input type="text" id="teacher-name"></div>
+                        <div class="form-group"><label for="grade">학년</label><input type="text" id="grade"></div>
+                        <div class="form-group"><label for="semester">학기</label><input type="text" id="semester"></div>
+                        <div class="form-group"><label for="subject">과목</label><input type="text" id="subject"></div>
+                        <div class="form-group"><label for="unit">단원</label><input type="text" id="unit"></div>
+                        <div class="form-group"><label for="period">차시</label><input type="text" id="period"></div>
+                        <div class="form-group"><label for="activity-count">전개 활동 개수</label><input type="number" id="activity-count" min="1" max="10" value="1"></div>
+                        <div class="form-group full-width"><label for="achievement-standard">성취기준</label><input type="text" id="achievement-standard"></div>
+                        <div class="form-actions"><button type="submit" class="primary">다음 단계로</button></div>
+                    </div>
+                </form>`;
+
+            const createCheckboxGroup = (items, namePrefix, rowIndex) => items.map(item => `
+                <label><input type="checkbox" name="${namePrefix}-${rowIndex}" value="${item}"> ${item}</label>
+            `).join('');
+
+            const step2Template = `
+                <form id="lesson-plan-form">
+                    <table class="lesson-plan-table">
+                        <thead><tr>
+                            <th style="width: 5%;">구분</th><th style="width: 12%;">활동명</th><th style="width: 5%;">시간(분)</th>
+                            <th style="width: 15%;">교사 활동</th><th style="width: 15%;">학생 활동</th><th style="width: 15%;">하이러닝 기능 활용방안</th>
+                            <th style="width: 11%;">메인 기능</th><th style="width: 11%;">보조 기능</th><th style="width: 11%;">평가</th>
+                        </tr></thead>
+                        <tbody id="lesson-plan-tbody"></tbody>
+                    </table>
+                    <div class="form-actions">
+                        <button type="button" id="back-to-step1-btn" class="secondary">이전</button>
+                        <button type="submit" class="primary">수업안 생성하기</button>
+                    </div>
+                </form>`;
+            
+            function showView(viewName) {
+                Object.values(views).forEach(view => view.style.display = 'none');
+                if (views[viewName]) views[viewName].style.display = 'block';
+                Object.values(navLinks).forEach(link => link.classList.remove('active'));
+                if (viewName === 'saved') {
+                    pageTitle.textContent = '저장된 수업 설계안';
+                    navLinks.saved.classList.add('active');
+                    renderSavedPlans();
+                } else {
+                    pageTitle.textContent = currentEditingId ? '수업 설계안 수정' : '새로운 수업 설계안 작성';
+                    navLinks.new.classList.add('active');
+                }
+            }
+
+            function startNewPlan() {
+                currentEditingId = null;
+                currentPlanData = { basicInfo: {}, lessonProcess: [] };
+                views.step1.innerHTML = step1Template;
+                views.step2.innerHTML = step2Template;
+                attachStep1Listeners();
+                showView('step1');
+            }
+
+            function renderSavedPlans() {
+                const plans = getPlansFromStorage();
+                views.saved.innerHTML = plans.length === 0 ? '<h3>저장된 설계안이 없습니다.</h3>' : 
+                    `<h3>저장된 설계안 목록</h3><ul class="saved-plan-list">${plans.map(plan => `
+                    <li class="saved-plan-item" data-id="${plan.id}">
+                        <span>${plan.basicInfo.subject || '제목 없음'} - ${plan.basicInfo.unit || '단원 없음'}</span>
+                        <div class="saved-plan-actions"><button class="edit">수정</button><button class="delete">삭제</button></div>
+                    </li>`).join('')}</ul>`;
+            }
+
+            function getPlansFromStorage() { return JSON.parse(localStorage.getItem('lessonPlans') || '[]'); }
+            function savePlansToStorage(plans) { localStorage.setItem('lessonPlans', JSON.stringify(plans)); }
+
+            function updateCurrentPlanDataFromForms() {
+                const basicInfo = {};
+                const step1Container = views.step1;
+                if (step1Container && step1Container.querySelector('#basic-info-form')) {
+                    basicInfo.teacherName = step1Container.querySelector('#teacher-name')?.value || '';
+                    basicInfo.grade = step1Container.querySelector('#grade')?.value || '';
+                    basicInfo.semester = step1Container.querySelector('#semester')?.value || '';
+                    basicInfo.subject = step1Container.querySelector('#subject')?.value || '';
+                    basicInfo.unit = step1Container.querySelector('#unit')?.value || '';
+                    basicInfo.period = step1Container.querySelector('#period')?.value || '';
+                    basicInfo.activityCount = step1Container.querySelector('#activity-count')?.value || '1';
+                    basicInfo.achievementStandard = step1Container.querySelector('#achievement-standard')?.value || '';
+                }
+                currentPlanData.basicInfo = basicInfo;
+
+                const lessonProcess = [];
+                if (views.step2.querySelector('#lesson-plan-form')) {
+                    document.querySelectorAll('#lesson-plan-tbody tr').forEach(row => {
+                        const getChecked = (name) => Array.from(row.querySelectorAll(`input[name^="${name}"]`)).filter(cb => cb.checked).map(cb => cb.value);
+                        lessonProcess.push({
+                            stage: row.dataset.stage,
+                            activityName: row.querySelector('.activity-name')?.value || '',
+                            activityTime: row.querySelector('.activity-time')?.value || '',
+                            teacherActivity: row.querySelector('.teacher-activity')?.value || '',
+                            studentActivity: row.querySelector('.student-activity')?.value || '',
+                            usagePlan: row.querySelector('.usage-plan')?.value || '',
+                            mainFuncs: getChecked('main-func'), subFuncs: getChecked('sub-func'), evals: getChecked('eval')
+                        });
+                    });
+                }
+                currentPlanData.lessonProcess = lessonProcess;
+            }
+
+            function saveCurrentPlan() {
+                if (!currentPlanData || !currentPlanData.basicInfo || !currentPlanData.basicInfo.subject) {
+                    alert('저장할 데이터가 없습니다. 과목명을 입력해주세요.');
+                    return;
+                }
+                currentPlanData.id = currentEditingId || Date.now();
+                let plans = getPlansFromStorage();
+                const existingIndex = plans.findIndex(p => p.id === currentPlanData.id);
+
+                if (existingIndex > -1) {
+                    plans[existingIndex] = currentPlanData;
+                } else {
+                    plans.push(currentPlanData);
+                }
+                savePlansToStorage(plans);
+                alert('수업 설계안이 저장되었습니다.');
+                currentEditingId = currentPlanData.id;
+            }
+
+            function deletePlan(planId) {
+                if (confirm('정말로 이 설계안을 삭제하시겠습니까?')) {
+                    savePlansToStorage(getPlansFromStorage().filter(p => p.id !== planId));
+                    renderSavedPlans();
+                }
+            }
+            
+            function populateFormsFromData(planData) {
+                currentPlanData = planData;
+                currentEditingId = planData.id;
+                
+                views.step1.innerHTML = step1Template;
+                Object.keys(planData.basicInfo).forEach(key => {
+                    const inputId = key.replace(/[A-Z]/g, letter => `-${letter.toLowerCase()}`);
+                    const el = document.querySelector(`#step1-form #${inputId}`);
+                    if (el) el.value = planData.basicInfo[key];
+                });
+                attachStep1Listeners();
+
+                views.step2.innerHTML = step2Template;
+                buildAndFillStep2Table(planData.lessonProcess);
+                attachStep2Listeners();
+            }
+
+            function buildAndFillStep2Table(lessonProcessData = []) {
+                const count = parseInt(views.step1.querySelector('#activity-count').value, 10);
+                const tbody = views.step2.querySelector('#lesson-plan-tbody');
+                tbody.innerHTML = '';
+
+                const stages = ['intro', ...Array.from({length: count}, (_, i) => `dev-${i}`), 'wrapup'];
+                
+                stages.forEach((stageKey, index) => {
+                    const rowData = lessonProcessData.find(p => p.stage === stageKey) || {};
+                    const tr = document.createElement('tr');
+                    tr.dataset.stage = stageKey;
+
+                    const stageName = {intro: '도입', wrapup: '정리'}[stageKey] || '전개';
+                    let stageCell = `<td><strong>${stageName}</strong></td>`;
+                    if (stageName === '전개') {
+                        if (stageKey === 'dev-0') {
+                            stageCell = `<td rowspan="${count}"><strong>전개</strong></td>`;
+                        } else {
+                            stageCell = '';
+                        }
+                    }
+
+                    tr.innerHTML = `
+                        ${stageCell}
+                        <td><input type="text" class="activity-name" value="${rowData.activityName || ''}"></td>
+                        <td><input type="number" class="activity-time" value="${rowData.activityTime || ''}"></td>
+                        <td><textarea class="teacher-activity">${rowData.teacherActivity || ''}</textarea></td>
+                        <td><textarea class="student-activity">${rowData.studentActivity || ''}</textarea></td>
+                        <td><textarea class="usage-plan">${rowData.usagePlan || ''}</textarea></td>
+                        <td class="checkbox-group">${createCheckboxGroup(mainFunctions, 'main-func', stageKey)}</td>
+                        <td class="checkbox-group">${createCheckboxGroup(subFunctions, 'sub-func', stageKey)}</td>
+                        <td class="checkbox-group">${createCheckboxGroup(evaluations, 'eval', stageKey)}</td>
+                    `;
+                    tbody.appendChild(tr);
+
+                    const setChecks = (name, vals) => (vals || []).forEach(v => { const cb = tr.querySelector(`input[name^="${name}"][value="${v}"]`); if (cb) cb.checked = true; });
+                    setChecks('main-func', rowData.mainFuncs); setChecks('sub-func', rowData.subFuncs); setChecks('eval', rowData.evals);
+                });
+            }
+            
+            function generateOutput(planData) {
+                const { basicInfo, lessonProcess } = planData;
+                views.lastStep.innerHTML = `
+                    <div id="output-capture">
+                        <div class="output-header"><h3>[${basicInfo.subject || ''}] ${basicInfo.unit || ''} 수업 설계안</h3></div>
+                        <div class="output-section"><h4>1. 기본 정보</h4>
+                            <div class="output-grid">
+                                <div class="output-item"><p><strong>교사명:</strong> ${basicInfo.teacherName || ''}</p></div>
+                                <div class="output-item"><p><strong>학년:</strong> ${basicInfo.grade || ''}</p></div>
+                                <div class="output-item"><p><strong>학기:</strong> ${basicInfo.semester || ''}</p></div>
+                                <div class="output-item"><p><strong>차시:</strong> ${basicInfo.period || ''}</p></div>
+                                <div class="output-item full-width" style="grid-column: 1 / -1;"><p><strong>성취기준:</strong> ${basicInfo.achievementStandard || ''}</p></div>
+                            </div>
+                        </div>
+                        <div class="output-section"><h4>2. 교수·학습 과정안</h4>
+                            <table class="output-plan-table"><thead><tr>
+                                <th style="width: 5%;">구분</th><th style="width: 12%;">활동명</th><th style="width: 5%;">시간</th>
+                                <th style="width: 15%;">교사 활동</th><th style="width: 15%;">학생 활동</th>
+                                <th style="width: 18%;">하이러닝 기능 활용방안</th><th>활용할 하이러닝 기능</th>
+                            </tr></thead><tbody>${(lessonProcess || []).map(p => `<tr>
+                                <td class="stage-title">${{intro: '도입', wrapup: '정리'}[p.stage] || '전개'}</td><td>${p.activityName}</td>
+                                <td style="text-align:center;">${p.activityTime}분</td><td>${(p.teacherActivity || '').replace(/\n/g, '<br>')}</td>
+                                <td>${(p.studentActivity || '').replace(/\n/g, '<br>')}</td><td>${(p.usagePlan || '').replace(/\n/g, '<br>')}</td>
+                                <td>${[
+                                    (p.mainFuncs || []).length ? `<strong>메인:</strong> ${p.mainFuncs.join(', ')}` : '',
+                                    (p.subFuncs || []).length ? `<strong>보조:</strong> ${p.subFuncs.join(', ')}` : '',
+                                    (p.evals || []).length ? `<strong>평가:</strong> ${p.evals.join(', ')}` : ''
+                                ].filter(Boolean).join('<br>')}</td></tr>`).join('')}</tbody>
+                            </table>
+                        </div>
+                    </div>
+                     <div class="form-actions">
+                        <button type="button" id="back-to-step2-btn" class="secondary">이전</button>
+                        <button type="button" id="export-btn" class="secondary">내보내기</button>
+                        <button type="button" id="save-btn" class="success">저장하기</button>
+                        <button type="button" id="print-png-btn" class="primary">인쇄하기 (PNG)</button>
+                    </div>`;
+                attachLastStepListeners();
+            }
+
+            function attachStep1Listeners() {
+                document.getElementById('basic-info-form').addEventListener('submit', (e) => {
+                    e.preventDefault();
+                    updateCurrentPlanDataFromForms();
+                    buildAndFillStep2Table(currentPlanData.lessonProcess);
+                    attachStep2Listeners();
+                    showView('step2');
+                });
+            }
+
+            function attachStep2Listeners() {
+                document.getElementById('lesson-plan-form').addEventListener('submit', (e) => {
+                    e.preventDefault();
+                    updateCurrentPlanDataFromForms();
+                    generateOutput(currentPlanData);
+                    showView('lastStep');
+                });
+                document.getElementById('back-to-step1-btn').addEventListener('click', () => {
+                    updateCurrentPlanDataFromForms();
+                    showView('step1');
+                });
+            }
+            
+            function attachLastStepListeners() {
+                document.getElementById('back-to-step2-btn').addEventListener('click', () => showView('step2'));
+                document.getElementById('save-btn').addEventListener('click', saveCurrentPlan);
+                document.getElementById('print-png-btn').addEventListener('click', () => {
+                    const captureElement = document.getElementById('output-capture');
+                    if (captureElement) {
+                        html2canvas(captureElement).then(canvas => {
+                            const link = document.createElement('a');
+                            link.download = '수업설계안.png';
+                            link.href = canvas.toDataURL('image/png');
+                            link.click();
+                        });
+                    }
+                });
+                document.getElementById('export-btn').addEventListener('click', () => {
+                    updateCurrentPlanDataFromForms();
+                    const encodedData = btoa(encodeURIComponent(JSON.stringify(currentPlanData)));
+                    const url = `${window.location.href.split('#')[0]}#data=${encodedData}`;
+                    navigator.clipboard.writeText(url).then(() => {
+                        alert('웹링크가 클립보드에 복사되었습니다.');
+                    });
+                });
+            }
+            
+            function handleSharedUrl() {
+                if (window.location.hash.startsWith('#data=')) {
+                    try {
+                        const encodedData = window.location.hash.substring(6);
+                        const decodedData = decodeURIComponent(atob(encodedData));
+                        const planData = JSON.parse(decodedData);
+                        populateFormsFromData(planData);
+                        generateOutput(planData);
+                        showView('lastStep');
+                    } catch (e) {
+                        console.error("공유된 데이터 파싱 오류:", e);
+                        startNewPlan();
+                    }
+                } else {
+                    startNewPlan();
+                }
+            }
+            
+            views.saved.addEventListener('click', (e) => {
+                const item = e.target.closest('.saved-plan-item');
+                if (!item) return;
+                const planId = Number(item.dataset.id);
+                if (e.target.classList.contains('edit')) {
+                    const plan = getPlansFromStorage().find(p => p.id === planId);
+                    if (plan) {
+                        populateFormsFromData(plan);
+                        showView('step1');
+                    }
+                } else if (e.target.classList.contains('delete')) {
+                    deletePlan(planId);
+                }
+            });
+
+            navLinks.new.addEventListener('click', (e) => { e.preventDefault(); startNewPlan(); });
+            navLinks.saved.addEventListener('click', (e) => { e.preventDefault(); showView('saved'); });
+            
+            handleSharedUrl();
+        });
+    </script>
+</body>
+</html>
